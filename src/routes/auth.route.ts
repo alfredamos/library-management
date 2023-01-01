@@ -10,3 +10,6 @@ router.route('/signup')
 
 router.route('/login')
       .post(userLoginValidationMiddleware, loginUser);
+
+
+export default router;

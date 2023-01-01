@@ -8,6 +8,9 @@ import {
     getUserById
 } from "../controllers/user.controller"
 
+import { checkIfAdmin } from "../middleware/check-if-admin.middleware";
+import { checkIfAuthenticated } from "../middleware/check-if-authenticated";
+
 import { userValidationMiddleware } from "../middleware/user-validation.middleware";
 
 
@@ -15,12 +18,12 @@ import { userValidationMiddleware } from "../middleware/user-validation.middlewa
 const router = express.Router();
 
 router.route('/')
-    .get(getAllUsers)
-    .post(userValidationMiddleware, createUser);
+    .get(checkIfAuthenticated,getAllUsers)
+    .post(userValidationMiddleware, checkIfAuthenticated, checkIfAdmin, createUser);
 
 router.route('/:id')
-    .delete(deleteUser)
-    .get(getUserById)
-    .patch(userValidationMiddleware, editUser);
+    .delete(checkIfAuthenticated, checkIfAdmin, deleteUser)
+    .get(checkIfAuthenticated, getUserById)
+    .patch(userValidationMiddleware, checkIfAuthenticated, checkIfAdmin, editUser);
 
 export default router;

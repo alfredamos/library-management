@@ -20,8 +20,9 @@ const prisma = new client_1.PrismaClient();
 const createAuthor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { body: newAuthor } = req;
     const newAuthorVar = newAuthor;
+    const { name } = newAuthorVar;
     const author = yield prisma.author.create({
-        data: Object.assign({}, newAuthorVar),
+        data: { name },
     });
     res.status(http_status_codes_1.StatusCodes.CREATED).json(author);
 });

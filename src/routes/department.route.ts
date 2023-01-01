@@ -19,6 +19,7 @@ const router = express.Router();
 router.route('/')
     .get(checkIfAuthenticated, getAllDepartments)
     .post(departmentValidationMiddleware, checkIfAuthenticated, checkIfAdmin, createDepartment);
+    //.post(departmentValidationMiddleware, createDepartment);
 
 router.route('/:id')
     .delete(checkIfAuthenticated, checkIfAdmin, deleteDepartment)

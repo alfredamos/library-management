@@ -1,38 +1,52 @@
-import createError from "http-errors";
+import catchError from "http-errors";
 import { PrismaClient } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
 import { StatusCodes } from "http-status-codes";
 import { User } from "../models/user.model";
 import * as jwt from "jsonwebtoken";
 import * as bcrypt from "bcrypt";
+import { UserType } from "@prisma/client";
+import { UserInfo } from "../models/user-info.model";
 
 const prisma = new PrismaClient();
 
 const createUser = async (req: Request, res: Response) => {
   const { body: newUser } = req;
 
-  const newUserVar = newUser as User;
+  const userToSignUp = newUser as User;
 
-  const departmentId = newUserVar.departmentId;
+  const email = userToSignUp.email;
 
-  const department = await prisma.department.findUnique({
-    where: { id: departmentId },
+  const user = await prisma.user.findUnique({
+    where: { email },
   });
 
-  if (!department) {
-    throw createError(
-      StatusCodes.NOT_FOUND,
-      `Department with id = ${departmentId} is not found, please select the correct department.`
-    );
+  if (user) {
+    throw catchError(StatusCodes.BAD_REQUEST, "User already exists.");
   }
 
-  
+  const hashedPassword = await bcrypt.hash(userToSignUp.password, 10);
 
-  const user = await prisma.user.create({
-    data: { ...newUserVar },
+  userToSignUp.password = hashedPassword;
+
+  const createdUser = await prisma.user.create({
+    data: { ...userToSignUp },
   });
 
-  res.status(StatusCodes.CREATED).json(user);
+  const token = await createJsonWebToken(
+    createdUser.id,
+    createdUser.fullName,
+    createdUser.userType
+  );
+
+  const userInfo: UserInfo = {
+    id: createdUser.id,
+    fullName: createdUser.fullName,
+    userType: createdUser.userType,
+    token,
+  };
+
+  res.status(StatusCodes.CREATED).json(userInfo);
 };
 
 const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -43,10 +57,7 @@ const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
   });
 
   if (!user) {
-    throw createError(
-      StatusCodes.NOT_FOUND,
-      `User with id ${id} is not found.`
-    );
+    throw catchError(StatusCodes.NOT_FOUND, `User with id ${id} is not found.`);
   }
 
   const deletedUser = await prisma.user.delete({
@@ -67,10 +78,7 @@ const editUser = async (req: Request, res: Response, next: NextFunction) => {
   });
 
   if (!user) {
-    throw createError(
-      StatusCodes.NOT_FOUND,
-      `User with id ${id} is not found.`
-    );
+    throw catchError(StatusCodes.NOT_FOUND, `User with id ${id} is not found.`);
   }
 
   const departmentId = userToUpdateVar.departmentId;
@@ -80,7 +88,7 @@ const editUser = async (req: Request, res: Response, next: NextFunction) => {
   });
 
   if (!department) {
-    throw createError(
+    throw catchError(
       StatusCodes.NOT_FOUND,
       `Department with id = ${departmentId} is not found, please select the correct department.`
     );
@@ -117,13 +125,28 @@ const getUserById = async (req: Request, res: Response, next: NextFunction) => {
   });
 
   if (!user) {
-    throw createError(
-      StatusCodes.NOT_FOUND,
-      `User with id ${id} is not found.`
-    );
+    throw catchError(StatusCodes.NOT_FOUND, `User with id ${id} is not found.`);
   }
 
   res.status(StatusCodes.OK).json(user);
 };
+
+async function createJsonWebToken(
+  id: string,
+  name: string,
+  userType: UserType
+) {
+  const token = await jwt.sign(
+    {
+      id,
+      name,
+      userType,
+    },
+    process.env.JSON_TOKEN_KEY!,
+    { expiresIn: "1hr" }
+  );
+
+  return token;
+}
 
 export { createUser, deleteUser, editUser, getAllUsers, getUserById };

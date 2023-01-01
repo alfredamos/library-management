@@ -7,13 +7,16 @@ import { Author } from "../models/author.model";
 const prisma = new PrismaClient();
 
 const createAuthor = async (req: Request, res: Response) => {
-  const { body: newAuthor } = req;
+  const { body: newAuthor} = req;
 
   const newAuthorVar = newAuthor as Author;
 
+  const {name} = newAuthorVar;  
+
   const author = await prisma.author.create({
-    data: { ...newAuthorVar },
+    data: { name },
   });
+
 
   res.status(StatusCodes.CREATED).json(author);
 };

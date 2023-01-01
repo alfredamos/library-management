@@ -7,4 +7,5 @@ var Category;
     Category["Faculty"] = "Faculty";
     Category["Staff"] = "Staff";
     Category["Others"] = "Others";
+    Category["Admin"] = "Admin";
 })(Category = exports.Category || (exports.Category = {}));

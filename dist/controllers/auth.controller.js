@@ -35,14 +35,39 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserById = exports.getAllUsers = exports.editUser = exports.deleteUser = exports.createUser = void 0;
+exports.signUpUser = exports.loginUser = void 0;
 const http_errors_1 = __importDefault(require("http-errors"));
 const client_1 = require("@prisma/client");
 const http_status_codes_1 = require("http-status-codes");
 const jwt = __importStar(require("jsonwebtoken"));
 const bcrypt = __importStar(require("bcrypt"));
 const prisma = new client_1.PrismaClient();
-const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { body: loginUser } = req;
+    const userToLogin = loginUser;
+    const { email, password } = userToLogin;
+    const user = yield prisma.user.findUnique({
+        where: { email },
+    });
+    if (!user) {
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid credentials');
+    }
+    const hashedPassword = user.password;
+    const isValid = yield bcrypt.compare(password, hashedPassword);
+    if (!isValid) {
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid credentials');
+    }
+    const token = yield createJsonWebToken(user.id, user.fullName, user.userType);
+    const userInfo = {
+        id: user.id,
+        fullName: user.fullName,
+        userType: user.userType,
+        token
+    };
+    res.status(http_status_codes_1.StatusCodes.OK).json(userInfo);
+});
+exports.loginUser = loginUser;
+const signUpUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { body: newUser } = req;
     const userToSignUp = newUser;
     const email = userToSignUp.email;
@@ -50,7 +75,7 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         where: { email },
     });
     if (user) {
-        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "User already exists.");
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, 'User already exists.');
     }
     const hashedPassword = yield bcrypt.hash(userToSignUp.password, 10);
     userToSignUp.password = hashedPassword;
@@ -62,81 +87,18 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         id: createdUser.id,
         fullName: createdUser.fullName,
         userType: createdUser.userType,
-        token,
+        token
     };
     res.status(http_status_codes_1.StatusCodes.CREATED).json(userInfo);
 });
-exports.createUser = createUser;
-const deleteUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    const user = yield prisma.user.findUnique({
-        where: { id },
-    });
-    if (!user) {
-        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.NOT_FOUND, `User with id ${id} is not found.`);
-    }
-    const deletedUser = yield prisma.user.delete({
-        where: { id },
-    });
-    res.status(http_status_codes_1.StatusCodes.OK).json(deletedUser);
-});
-exports.deleteUser = deleteUser;
-const editUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    const { body: userToUpdate } = req;
-    const userToUpdateVar = userToUpdate;
-    const user = yield prisma.user.findUnique({
-        where: { id },
-    });
-    if (!user) {
-        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.NOT_FOUND, `User with id ${id} is not found.`);
-    }
-    const departmentId = userToUpdateVar.departmentId;
-    const department = yield prisma.department.findUnique({
-        where: { id: departmentId },
-    });
-    if (!department) {
-        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.NOT_FOUND, `Department with id = ${departmentId} is not found, please select the correct department.`);
-    }
-    const updatedUser = yield prisma.user.update({
-        where: { id },
-        data: Object.assign({}, userToUpdateVar),
-    });
-    res.status(http_status_codes_1.StatusCodes.OK).json(updatedUser);
-});
-exports.editUser = editUser;
-const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const users = yield prisma.user.findMany({
-        include: {
-            libraryUsers: true,
-            department: true,
-        },
-    });
-    res.status(http_status_codes_1.StatusCodes.OK).json(users);
-});
-exports.getAllUsers = getAllUsers;
-const getUserById = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    const user = yield prisma.user.findUnique({
-        where: { id },
-        include: {
-            libraryUsers: true,
-            department: true,
-        },
-    });
-    if (!user) {
-        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.NOT_FOUND, `User with id ${id} is not found.`);
-    }
-    res.status(http_status_codes_1.StatusCodes.OK).json(user);
-});
-exports.getUserById = getUserById;
+exports.signUpUser = signUpUser;
 function createJsonWebToken(id, name, userType) {
     return __awaiter(this, void 0, void 0, function* () {
         const token = yield jwt.sign({
             id,
             name,
             userType,
-        }, process.env.JSON_TOKEN_KEY, { expiresIn: "1hr" });
+        }, process.env.JSON_TOKEN_KEY, { expiresIn: '1hr' });
         return token;
     });
 }
