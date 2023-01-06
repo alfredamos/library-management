@@ -11,6 +11,7 @@ import {
 } from "../controllers/library.controller"
 
 import { libraryValidationMiddleware } from "../middleware/library-validation.middleware";
+import { checKCanLibraryModify } from '../middleware/check-can-library-modify.middleware';
 
 
 
@@ -18,11 +19,11 @@ const router = express.Router();
 
 router.route('/')
     .get(checkIfAuthenticated, getAllLibraries)
-    .post(libraryValidationMiddleware, checkIfAuthenticated, checkIfAdmin, createLibrary);
+    .post(libraryValidationMiddleware, checkIfAuthenticated, createLibrary);
 
 router.route('/:id')
-    .delete(checkIfAuthenticated, checkIfAdmin, deleteLibrary)
+    .delete(checkIfAuthenticated, checKCanLibraryModify, deleteLibrary)
     .get(checkIfAuthenticated, getLibraryById)
-    .patch(libraryValidationMiddleware, checkIfAuthenticated, checkIfAdmin, editLibrary);
+    .patch(libraryValidationMiddleware, checkIfAuthenticated, checKCanLibraryModify, editLibrary);
 
 export default router;

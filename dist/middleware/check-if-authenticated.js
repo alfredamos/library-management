@@ -43,7 +43,7 @@ const checkIfAuthenticated = (req, res, next) => {
     var _a, _b;
     const authJsonToken = (_b = (_a = req === null || req === void 0 ? void 0 : req.headers) === null || _a === void 0 ? void 0 : _a.authorization) === null || _b === void 0 ? void 0 : _b.split(" ")[1];
     if (!authJsonToken) {
-        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.UNAUTHORIZED, "Invalid credentials");
+        next((0, http_errors_1.default)(http_status_codes_1.StatusCodes.FORBIDDEN, "Invalid credentials"));
     }
     checkJwtToken(authJsonToken)
         .then((user) => {
@@ -52,12 +52,13 @@ const checkIfAuthenticated = (req, res, next) => {
         return;
     })
         .catch((err) => {
-        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.UNAUTHORIZED, "Invalid credentials");
+        next((0, http_errors_1.default)(http_status_codes_1.StatusCodes.FORBIDDEN, "Invalid credentials"));
     });
+    return;
 };
 exports.checkIfAuthenticated = checkIfAuthenticated;
 function checkJwtToken(tokenToVerify) {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield jwt.verify(tokenToVerify, process.env.JSON_TOKEN_KEY);
+        return yield jwt.verify(tokenToVerify, process.env.JWT_TOKEN_SECRET);
     });
 }

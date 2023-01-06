@@ -35,12 +35,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.signUpUser = exports.loginUser = void 0;
+exports.signUpUser = exports.profileOfUser = exports.loginUser = exports.changePasswordOfUser = void 0;
 const http_errors_1 = __importDefault(require("http-errors"));
 const client_1 = require("@prisma/client");
 const http_status_codes_1 = require("http-status-codes");
 const jwt = __importStar(require("jsonwebtoken"));
 const bcrypt = __importStar(require("bcrypt"));
+const uuid_tool_1 = require("uuid-tool");
 const prisma = new client_1.PrismaClient();
 const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { body: loginUser } = req;
@@ -50,23 +51,105 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         where: { email },
     });
     if (!user) {
-        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid credentials');
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "Invalid credentials");
     }
     const hashedPassword = user.password;
     const isValid = yield bcrypt.compare(password, hashedPassword);
     if (!isValid) {
-        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid credentials');
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "Invalid credentials");
     }
     const token = yield createJsonWebToken(user.id, user.fullName, user.userType);
     const userInfo = {
         id: user.id,
         fullName: user.fullName,
         userType: user.userType,
-        token
+        token,
     };
     res.status(http_status_codes_1.StatusCodes.OK).json(userInfo);
 });
 exports.loginUser = loginUser;
+const changePasswordOfUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { body: userChangePwd } = req;
+    const userChangePassword = userChangePwd;
+    const { email, oldPassword, newPassword, confirmPassword } = userChangePassword;
+    //----> New password must match the confirm password.
+    if (newPassword.normalize() !== confirmPassword.normalize()) {
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "new password does not match confirm password.");
+    }
+    const user = yield prisma.user.findUnique({
+        where: { email },
+    });
+    if (!user) {
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "Invalid credentials");
+    }
+    //----> Retrieve the old password from database
+    const hashedPassword = user.password;
+    const isValid = yield bcrypt.compare(oldPassword, hashedPassword); //----> Compare the old password with the password stored in the database.
+    //----> Check the validity of password.
+    if (!isValid) {
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "Invalid credentials");
+    }
+    //----> Hash the new password.
+    const newHashedPassword = yield bcrypt.hash(newPassword, 10);
+    //----> Store the new password in the database.
+    const updatedUser = yield prisma.user.update({
+        where: { email },
+        data: Object.assign(Object.assign({}, user), { password: newHashedPassword }),
+    });
+    //----> Make a user object information.
+    const userInfo = {
+        id: updatedUser.id,
+        fullName: updatedUser.fullName,
+        userType: updatedUser.userType,
+        message: "Password is changed successfully, please login.",
+    };
+    //----> Send the user information to client.
+    res.status(http_status_codes_1.StatusCodes.OK).json(userInfo);
+});
+exports.changePasswordOfUser = changePasswordOfUser;
+const profileOfUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { body: userInput } = req;
+    const { id } = req.params;
+    const user = userInput;
+    const { email, password, newPassword, id: userId } = user;
+    //----> Check for correctness of id.
+    let isEqual = uuid_tool_1.UuidTool.compare(id, userId);
+    if (!isEqual) {
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "Id mismatch");
+    }
+    //---> Check if user exists already.
+    const existingUser = yield prisma.user.findUnique({ where: { email } });
+    if (!existingUser) {
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "Invalid credentials");
+    }
+    //----> Check for the correctness of the user password.
+    const isValid = yield bcrypt.compare(password, existingUser.password);
+    if (!isValid) {
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "Invalid credentials");
+    }
+    if (!newPassword) {
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "Provide the new password.");
+    }
+    //----> Hash the new password.
+    const hashedPassword = yield bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    delete user.newPassword;
+    //----> Store the new password in the database.
+    const updatedUser = yield prisma.user.update({
+        where: { id },
+        data: Object.assign({}, user),
+    });
+    //----> Make a user object information.
+    const userInfo = {
+        id: updatedUser.id,
+        fullName: updatedUser.fullName,
+        userType: updatedUser.userType,
+        message: "Password is changed successfully, please login.",
+    };
+    //----> Send the user information to client.
+    res.status(http_status_codes_1.StatusCodes.OK).json(userInfo);
+});
+exports.profileOfUser = profileOfUser;
 const signUpUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { body: newUser } = req;
     const userToSignUp = newUser;
@@ -75,19 +158,19 @@ const signUpUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         where: { email },
     });
     if (user) {
-        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, 'User already exists.');
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "User already exists.");
     }
     const hashedPassword = yield bcrypt.hash(userToSignUp.password, 10);
     userToSignUp.password = hashedPassword;
     const createdUser = yield prisma.user.create({
         data: Object.assign({}, userToSignUp),
     });
-    const token = yield createJsonWebToken(createdUser.id, createdUser.fullName, createdUser.userType);
+    //const token = await createJsonWebToken(createdUser.id, createdUser.fullName, createdUser.userType);
     const userInfo = {
         id: createdUser.id,
         fullName: createdUser.fullName,
         userType: createdUser.userType,
-        token
+        message: "Signup is successful.",
     };
     res.status(http_status_codes_1.StatusCodes.CREATED).json(userInfo);
 });
@@ -98,7 +181,7 @@ function createJsonWebToken(id, name, userType) {
             id,
             name,
             userType,
-        }, process.env.JSON_TOKEN_KEY, { expiresIn: '1hr' });
+        }, process.env.JWT_TOKEN_SECRET, { expiresIn: "1hr" });
         return token;
     });
 }

@@ -4,5 +4,6 @@ export class UserInfo {
     id!: string;
     fullName!: string;
     userType!: UserType;
-    token!: string;
+    token?: string;
+    message?: string;
 }

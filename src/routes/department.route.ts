@@ -17,9 +17,9 @@ import { departmentValidationMiddleware } from "../middleware/department-validat
 const router = express.Router();
 
 router.route('/')
-    .get(checkIfAuthenticated, getAllDepartments)
+    //.get(checkIfAuthenticated, getAllDepartments)
+    .get(getAllDepartments)
     .post(departmentValidationMiddleware, checkIfAuthenticated, checkIfAdmin, createDepartment);
-    //.post(departmentValidationMiddleware, createDepartment);
 
 router.route('/:id')
     .delete(checkIfAuthenticated, checkIfAdmin, deleteDepartment)

@@ -12,8 +12,8 @@ const userLoginValidationMiddleware = (req, res, next) => {
     const userVar = user;
     const { error, value } = (0, user_login_validation_1.userLoginValidation)(userVar);
     if (error) {
-        const errorMessage = Object.values(error.details).map(err => err.message).join('. ');
-        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, `${errorMessage} - please provide all required values`);
+        const errorMessage = error.details.map(err => err.message).join('. ');
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, `${JSON.stringify(errorMessage)} - please provide all required values`);
     }
     next();
     return value;

@@ -10,13 +10,14 @@ export const checkIfAdmin = (
   next: NextFunction
 ) => {
   const user = req['user'] as UserInfo;
-
+  
   if (user?.userType !== UserType.Admin) {
-    throw catchError(
-      StatusCodes.FORBIDDEN,
+    next(catchError(
+      StatusCodes.UNAUTHORIZED,
       "You are not authorized to perform this task."
-    );
-  }
+    ));
 
+    return;
+  }
   next();
 };

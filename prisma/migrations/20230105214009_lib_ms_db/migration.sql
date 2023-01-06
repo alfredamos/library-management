@@ -44,6 +44,7 @@ CREATE TABLE `users` (
     `phone` VARCHAR(255) NOT NULL,
     `password` VARCHAR(255) NOT NULL,
     `departmentId` VARCHAR(191) NOT NULL,
+    `userType` ENUM('Student', 'Staff', 'Admin') NOT NULL DEFAULT 'Student',
 
     UNIQUE INDEX `users_email_key`(`email`),
     PRIMARY KEY (`id`)

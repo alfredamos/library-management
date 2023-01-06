@@ -11,21 +11,23 @@ export const checkIfAuthenticated = (
   const authJsonToken = req?.headers?.authorization?.split(" ")[1];
 
   if (!authJsonToken) {
-    throw catchError(StatusCodes.UNAUTHORIZED, "Invalid credentials");
+    next(catchError(StatusCodes.FORBIDDEN, "Invalid credentials"));
   }
 
   checkJwtToken(authJsonToken)
     .then((user) => {
       req["user"] = user;
-      
+
       next();
       return;
     })
     .catch((err) => {
-      throw catchError(StatusCodes.UNAUTHORIZED, "Invalid credentials");
+      next(catchError(StatusCodes.FORBIDDEN, "Invalid credentials"));
     });
+
+  return;
 };
 
 async function checkJwtToken(tokenToVerify: string) {
-  return await jwt.verify(tokenToVerify, process.env.JSON_TOKEN_KEY);
+  return await jwt.verify(tokenToVerify, process.env.JWT_TOKEN_SECRET);
 }

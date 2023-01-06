@@ -10,9 +10,12 @@ export const departmentValidationMiddleware = (req: Request, res: Response, next
     const {error, value} = departmentValidation(departmentVar);
 
     if (error) {
-        const errorMessage = Object.values(error.details).map(err => err.message).join('. ');        
+        const errorMessage = error.details.map(err => err.message).join('. ');        
 
-        throw createError(StatusCodes.BAD_REQUEST, `${errorMessage} - please provide all required values`);
+        throw createError(
+          StatusCodes.BAD_REQUEST,
+          `${JSON.stringify(errorMessage)} - please provide all required values`
+        );
     }
 
     next();

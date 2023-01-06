@@ -10,9 +10,12 @@ export const authorValidationMiddleware = (req: Request, res: Response, next: Ne
     const {error, value} = authorValidation(authorVar);
 
     if (error) {
-        const errorMessage = Object.values(error.details).join('. ');        
+        const errorMessage = error.details.map(err => err.message).join('. ');        
 
-        throw createError(StatusCodes.BAD_REQUEST, `${errorMessage} - please provide all required values`);
+        throw createError(
+          StatusCodes.BAD_REQUEST,
+          `${JSON.stringify(errorMessage)} - please provide all required values`
+        );
     }
 
     next();

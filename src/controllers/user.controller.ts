@@ -6,6 +6,7 @@ import { User } from "../models/user.model";
 import * as jwt from "jsonwebtoken";
 import * as bcrypt from "bcrypt";
 import { UserType } from "@prisma/client";
+import {UuidTool} from "uuid-tool"
 import { UserInfo } from "../models/user-info.model";
 
 const prisma = new PrismaClient();
@@ -68,43 +69,75 @@ const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 const editUser = async (req: Request, res: Response, next: NextFunction) => {
+  const { body: userInput } = req;
   const { id } = req.params;
-  const { body: userToUpdate } = req;
+  const user = userInput as User;
 
-  const userToUpdateVar = userToUpdate as User;
+  const { email, password, newPassword, id: userId } = user;
 
-  const user = await prisma.user.findUnique({
-    where: { id },
-  });
-
-  if (!user) {
-    throw catchError(StatusCodes.NOT_FOUND, `User with id ${id} is not found.`);
+  //----> Check for correctness of id.
+  let isEqual = UuidTool.compare(id, userId);
+  if (!isEqual) {
+    throw catchError(StatusCodes.BAD_REQUEST, "Id mismatch");
   }
 
-  const departmentId = userToUpdateVar.departmentId;
+  //---> Check if user exists already.
+  const existingUser = await prisma.user.findUnique({ where: { email } });
 
-  const department = await prisma.department.findUnique({
-    where: { id: departmentId },
-  });
-
-  if (!department) {
-    throw catchError(
-      StatusCodes.NOT_FOUND,
-      `Department with id = ${departmentId} is not found, please select the correct department.`
-    );
+  if (!existingUser) {
+    throw catchError(StatusCodes.BAD_REQUEST, "Invalid credentials");
   }
+
+  //----> Check for the correctness of the user password.
+  const isValid = await bcrypt.compare(password, existingUser.password);
+
+  if (!isValid) {
+    throw catchError(StatusCodes.BAD_REQUEST, "Invalid credentials");
+  }
+
+  if (!newPassword) {
+    throw catchError(StatusCodes.BAD_REQUEST, "Provide the new password.");
+  }
+
+  //----> Hash the new password.
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  user.password = hashedPassword;
+
+  delete user.newPassword;
+
+  //----> Store the new password in the database.
 
   const updatedUser = await prisma.user.update({
     where: { id },
-    data: { ...userToUpdateVar },
+    data: { ...user },
   });
 
-  res.status(StatusCodes.OK).json(updatedUser);
+  //----> Generate Json web token.
+  /* const token = await generateJwtWebToken(
+    updatedUser.id,
+    updatedUser.name,
+    updatedUser.userType
+  ); */
+
+  //----> Make a user object information.
+  const userInfo: UserInfo = {
+    id: updatedUser.id,
+    fullName: updatedUser.fullName,
+    userType: updatedUser.userType,
+    message: "Password is changed successfully, please login.",
+    //token,
+  };
+
+  //----> Send the user information to client.
+  res.status(StatusCodes.OK).json(userInfo);
 };
 
 const getAllUsers = async (req: Request, res: Response) => {
   const users = await prisma.user.findMany({
-    include: {
+    select: {
+      id: true,
+      fullName: true,
+      userType: true,
       libraryUsers: true,
       department: true,
     },
@@ -118,7 +151,10 @@ const getUserById = async (req: Request, res: Response, next: NextFunction) => {
 
   const user = await prisma.user.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      fullName: true,
+      userType: true,
       libraryUsers: true,
       department: true,
     },
@@ -142,7 +178,7 @@ async function createJsonWebToken(
       name,
       userType,
     },
-    process.env.JSON_TOKEN_KEY!,
+    process.env.JWT_TOKEN_SECRET!,
     { expiresIn: "1hr" }
   );
 

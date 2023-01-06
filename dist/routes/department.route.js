@@ -10,9 +10,9 @@ const department_controller_1 = require("../controllers/department.controller");
 const department_validation_middleware_1 = require("../middleware/department-validation.middleware");
 const router = express_1.default.Router();
 router.route('/')
-    .get(check_if_authenticated_1.checkIfAuthenticated, department_controller_1.getAllDepartments)
+    //.get(checkIfAuthenticated, getAllDepartments)
+    .get(department_controller_1.getAllDepartments)
     .post(department_validation_middleware_1.departmentValidationMiddleware, check_if_authenticated_1.checkIfAuthenticated, check_if_admin_middleware_1.checkIfAdmin, department_controller_1.createDepartment);
-//.post(departmentValidationMiddleware, createDepartment);
 router.route('/:id')
     .delete(check_if_authenticated_1.checkIfAuthenticated, check_if_admin_middleware_1.checkIfAdmin, department_controller_1.deleteDepartment)
     .get(check_if_authenticated_1.checkIfAuthenticated, department_controller_1.getDepartmentById)

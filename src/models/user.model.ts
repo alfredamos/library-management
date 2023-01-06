@@ -6,6 +6,7 @@ export class User {
     email!: string;
     phone!: string;
     password!: string;
+    newPassword?: string;
     departmentId!: string;
     userType!: UserType;
 }
