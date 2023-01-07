@@ -18,6 +18,7 @@ export const checKCanLibraryModify = async(req: Request, res: Response, next: Ne
           StatusCodes.BAD_REQUEST,
           "This book order does not exist."
         ));
+        return;
     }
 
     const library = await prisma.library.findUnique({
@@ -25,10 +26,11 @@ export const checKCanLibraryModify = async(req: Request, res: Response, next: Ne
     })
 
     if (!library) {
-      throw catchError(
+      next(catchError(
         StatusCodes.BAD_REQUEST,
         "This book order does not exist."
-      );
+      ));
+      return;
     }
 
     const userId = library?.userId;

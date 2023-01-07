@@ -44,6 +44,7 @@ const checkIfAuthenticated = (req, res, next) => {
     const authJsonToken = (_b = (_a = req === null || req === void 0 ? void 0 : req.headers) === null || _a === void 0 ? void 0 : _a.authorization) === null || _b === void 0 ? void 0 : _b.split(" ")[1];
     if (!authJsonToken) {
         next((0, http_errors_1.default)(http_status_codes_1.StatusCodes.FORBIDDEN, "Invalid credentials"));
+        return;
     }
     checkJwtToken(authJsonToken)
         .then((user) => {
@@ -53,8 +54,8 @@ const checkIfAuthenticated = (req, res, next) => {
     })
         .catch((err) => {
         next((0, http_errors_1.default)(http_status_codes_1.StatusCodes.FORBIDDEN, "Invalid credentials"));
+        return;
     });
-    return;
 };
 exports.checkIfAuthenticated = checkIfAuthenticated;
 function checkJwtToken(tokenToVerify) {

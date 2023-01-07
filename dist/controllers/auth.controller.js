@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.signUpUser = exports.profileOfUser = exports.loginUser = exports.changePasswordOfUser = void 0;
+exports.signUpUser = exports.profileOfUserById = exports.profileOfUser = exports.loginUser = exports.changePasswordOfUser = void 0;
 const http_errors_1 = __importDefault(require("http-errors"));
 const client_1 = require("@prisma/client");
 const http_status_codes_1 = require("http-status-codes");
@@ -109,6 +109,40 @@ const changePasswordOfUser = (req, res) => __awaiter(void 0, void 0, void 0, fun
 exports.changePasswordOfUser = changePasswordOfUser;
 const profileOfUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { body: userInput } = req;
+    const user = userInput;
+    const { email, password, newPassword } = user;
+    //---> Check if user exists already.
+    const existingUser = yield prisma.user.findUnique({ where: { email } });
+    if (!existingUser) {
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "Invalid credentials");
+    }
+    //----> Check for the correctness of the user password.
+    const isValid = yield bcrypt.compare(password, existingUser.password);
+    if (!isValid) {
+        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "Invalid credentials");
+    }
+    //----> Hash the new password.
+    const hashedPassword = yield bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    delete user.newPassword;
+    //----> Store the new password in the database.
+    const updatedUser = yield prisma.user.update({
+        where: { email },
+        data: Object.assign(Object.assign({}, user), { id: existingUser.id }),
+    });
+    //----> Make a user object information.
+    const userInfo = {
+        id: updatedUser.id,
+        fullName: updatedUser.fullName,
+        userType: updatedUser.userType,
+        message: "Password is changed successfully, please login.",
+    };
+    //----> Send the user information to client.
+    res.status(http_status_codes_1.StatusCodes.OK).json(userInfo);
+});
+exports.profileOfUser = profileOfUser;
+const profileOfUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { body: userInput } = req;
     const { id } = req.params;
     const user = userInput;
     const { email, password, newPassword, id: userId } = user;
@@ -126,9 +160,6 @@ const profileOfUser = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     const isValid = yield bcrypt.compare(password, existingUser.password);
     if (!isValid) {
         throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "Invalid credentials");
-    }
-    if (!newPassword) {
-        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "Provide the new password.");
     }
     //----> Hash the new password.
     const hashedPassword = yield bcrypt.hash(newPassword, 10);
@@ -149,7 +180,7 @@ const profileOfUser = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     //----> Send the user information to client.
     res.status(http_status_codes_1.StatusCodes.OK).json(userInfo);
 });
-exports.profileOfUser = profileOfUser;
+exports.profileOfUserById = profileOfUserById;
 const signUpUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { body: newUser } = req;
     const userToSignUp = newUser;

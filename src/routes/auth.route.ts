@@ -3,6 +3,7 @@ import {
   changePasswordOfUser,
   loginUser,
   profileOfUser,
+  profileOfUserById,
   signUpUser,
 } from "../controllers/auth.controller";
 import { userValidationMiddleware } from "../middleware/user-validation.middleware";
@@ -19,7 +20,9 @@ router
 router.route('/login')
       .post(userLoginValidationMiddleware, loginUser);
 
-router.route("/profile/:id").patch(userProfileValidationMiddleware, profileOfUser);
+router.route("/profile").patch(userProfileValidationMiddleware, profileOfUser);
+
+router.route("/profile/:id").patch(userProfileValidationMiddleware, profileOfUserById);
 
 router.route("/signup").post(userValidationMiddleware, signUpUser);
 

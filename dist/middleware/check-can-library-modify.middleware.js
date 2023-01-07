@@ -23,12 +23,14 @@ const checKCanLibraryModify = (req, res, next) => __awaiter(void 0, void 0, void
     const userInfo = req['user'];
     if (!id) {
         next((0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "This book order does not exist."));
+        return;
     }
     const library = yield prisma.library.findUnique({
         where: { id },
     });
     if (!library) {
-        throw (0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "This book order does not exist.");
+        next((0, http_errors_1.default)(http_status_codes_1.StatusCodes.BAD_REQUEST, "This book order does not exist."));
+        return;
     }
     const userId = library === null || library === void 0 ? void 0 : library.userId;
     const isValid = uuid_tool_1.UuidTool.compare(userInfo.id, userId);

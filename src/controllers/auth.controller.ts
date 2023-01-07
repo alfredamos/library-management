@@ -10,7 +10,9 @@ import { UserInfo } from "../models/user-info.model";
 import { UserType } from "@prisma/client";
 import { UuidTool } from "uuid-tool";
 
+
 const prisma = new PrismaClient();
+
 
 const loginUser = async (req: Request, res: Response) => {
   const { body: loginUser } = req;
@@ -45,6 +47,7 @@ const loginUser = async (req: Request, res: Response) => {
 
   res.status(StatusCodes.OK).json(userInfo);
 };
+
 
 const changePasswordOfUser = async (req: Request, res: Response) => {
   const { body: userChangePwd } = req;
@@ -100,7 +103,55 @@ const changePasswordOfUser = async (req: Request, res: Response) => {
   res.status(StatusCodes.OK).json(userInfo);
 };
 
+
 const profileOfUser = async (req: Request, res: Response) => {
+  const { body: userInput } = req;
+  
+  const user = userInput as User;
+
+  const { email, password, newPassword } = user;
+  
+  //---> Check if user exists already.
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+
+  if (!existingUser) {
+    throw catchError(StatusCodes.BAD_REQUEST, "Invalid credentials");
+  }
+
+  //----> Check for the correctness of the user password.
+  const isValid = await bcrypt.compare(password, existingUser.password);
+
+  if (!isValid) {
+    throw catchError(StatusCodes.BAD_REQUEST, "Invalid credentials");
+  }
+
+  //----> Hash the new password.
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  user.password = hashedPassword;
+
+  delete user.newPassword;
+
+  //----> Store the new password in the database.
+
+  const updatedUser = await prisma.user.update({
+    where: { email },
+    data: { ...user, id: existingUser.id},
+  });
+
+  //----> Make a user object information.
+  const userInfo: UserInfo = {
+    id: updatedUser.id,
+    fullName: updatedUser.fullName,
+    userType: updatedUser.userType,
+    message: "Password is changed successfully, please login.",    
+  };
+
+  //----> Send the user information to client.
+  res.status(StatusCodes.OK).json(userInfo);
+};
+
+
+const profileOfUserById = async (req: Request, res: Response) => {
   const { body: userInput } = req;
   const { id } = req.params;
   const user = userInput as User;
@@ -127,10 +178,6 @@ const profileOfUser = async (req: Request, res: Response) => {
     throw catchError(StatusCodes.BAD_REQUEST, "Invalid credentials");
   }
 
-  if (!newPassword) {
-    throw catchError(StatusCodes.BAD_REQUEST, "Provide the new password.");
-  }
-
   //----> Hash the new password.
   const hashedPassword = await bcrypt.hash(newPassword, 10);
   user.password = hashedPassword;
@@ -155,6 +202,7 @@ const profileOfUser = async (req: Request, res: Response) => {
   //----> Send the user information to client.
   res.status(StatusCodes.OK).json(userInfo);
 };
+
 
 const signUpUser = async (req: Request, res: Response) => {
   const { body: newUser } = req;
@@ -191,6 +239,7 @@ const signUpUser = async (req: Request, res: Response) => {
   res.status(StatusCodes.CREATED).json(userInfo);
 };
 
+
 async function createJsonWebToken(
   id: string,
   name: string,
@@ -209,4 +258,4 @@ async function createJsonWebToken(
   return token;
 }
 
-export { changePasswordOfUser, loginUser, profileOfUser, signUpUser };
+export { changePasswordOfUser, loginUser, profileOfUser, profileOfUserById, signUpUser };

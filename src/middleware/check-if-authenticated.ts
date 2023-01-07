@@ -12,6 +12,7 @@ export const checkIfAuthenticated = (
 
   if (!authJsonToken) {
     next(catchError(StatusCodes.FORBIDDEN, "Invalid credentials"));
+    return;
   }
 
   checkJwtToken(authJsonToken)
@@ -23,9 +24,10 @@ export const checkIfAuthenticated = (
     })
     .catch((err) => {
       next(catchError(StatusCodes.FORBIDDEN, "Invalid credentials"));
+      return;
     });
 
-  return;
+ 
 };
 
 async function checkJwtToken(tokenToVerify: string) {

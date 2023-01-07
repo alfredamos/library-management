@@ -12,6 +12,7 @@ router
     .patch(user_change_password_validation_middleware_1.userChangePasswordValidationMiddleware, auth_controller_1.changePasswordOfUser);
 router.route('/login')
     .post(user_login_validation_middleware_1.userLoginValidationMiddleware, auth_controller_1.loginUser);
-router.route("/profile/:id").patch(user_profile_validation_middleware_1.userProfileValidationMiddleware, auth_controller_1.profileOfUser);
+router.route("/profile").patch(user_profile_validation_middleware_1.userProfileValidationMiddleware, auth_controller_1.profileOfUser);
+router.route("/profile/:id").patch(user_profile_validation_middleware_1.userProfileValidationMiddleware, auth_controller_1.profileOfUserById);
 router.route("/signup").post(user_validation_middleware_1.userValidationMiddleware, auth_controller_1.signUpUser);
 exports.default = router;
